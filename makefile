@@ -1,10 +1,11 @@
 SHELL = /bin/sh
 CWD := $(shell pwd)
 CFLAGS ?= -Wall -pedantic -O3 -std=gnu99
-CPPFLAGS ?=
-LDFLAGS ?= -lrt
+CPPFLAGS ?= -I java2arduino-c
+LDFLAGS ?= -lrt -lusb-1.0
 SRCS := \
-	$(wildcard *.c)
+	$(wildcard *.c) \
+	$(wildcard java2arduino-c/*.c)
 OBJS = $(SRCS:%.c=%.o)
 DEPS = $(SRCS:%.c=%.d)
 EXE := main.exe
