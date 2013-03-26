@@ -1,29 +1,27 @@
 SHELL = /bin/sh
 CWD := $(shell pwd)
 CFLAGS ?= -Wall -pedantic -O3 -std=gnu99 -g -Wno-unused-function
-CPPFLAGS ?= -I java2arduino-c -I realtimeify
+VPATH ?= lib/ java2arduino-c/ realtimeify/
+override CPPFLAGS += $(patsubst %,-I%,$(subst :, ,$(VPATH)))
 LDFLAGS ?= -lrt -lusb-1.0
-SRCS := \
-	$(wildcard *.c) \
-	$(wildcard java2arduino-c/*.c) \
-	$(wildcard realtimeify/*.c)
+EXES = main.exe
+SRCS := $(wildcard $(addsuffix *.c,$(VPATH)))
 OBJS = $(SRCS:%.c=%.o)
-DEPS = $(SRCS:%.c=%.d)
-EXE := main.exe
+DEPS = $(SRCS:%.c=%.d) $(EXES:%.exe=%.d)
 
-all: $(EXE)
+all: $(EXES)
 
-.PRECIOUS: $(OBJS)
-%.exe: $(OBJS)
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+.PRECIOUS: $(OBJS) $(EXES:%.exe=%.o)
+%.exe: $(OBJS) $(EXES:%.exe=%.o)
+	$(CC) $(CFLAGS) $(OBJS) $(@:.exe=.o) -o $@ $(LDFLAGS)
 
 -include $(OBJS:.o=.d)
 
 %.o: %.c %.h
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $< -o $@
-	$(CC) -MM $(CFLAGS) $*.c > $*.d
+	$(CC) -MM $(CFLAGS) $(CPPFLAGS) $*.c > $*.d
 
 clean:
-	rm -rf $(EXE) $(OBJS) $(DEPS)
+	rm -rf $(EXES) $(EXES:%.exe=%.o) $(OBJS) $(DEPS)
 
 .PHONY = clean all
