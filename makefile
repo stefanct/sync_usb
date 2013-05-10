@@ -1,10 +1,10 @@
 SHELL = /bin/sh
 CWD := $(shell pwd)
-CFLAGS ?= -Wall -pedantic -O3 -std=gnu99 -g -Wno-unused-function
+CFLAGS ?= -Wall -Wextra -pedantic -O3 -std=gnu99 -g -Wno-unused-function
 VPATH ?= lib/ java2arduino-c/ java2arduino-c/common/ realtimeify/ ../../
 override CPPFLAGS += $(patsubst %,-I%,$(subst :, ,$(VPATH)))
 LDFLAGS ?= -lrt -lusb-1.0
-EXES = benchmark.exe sync.exe
+EXES = benchmark.exe sync.exe debug.exe
 SRCS := $(wildcard $(addsuffix *.c,$(VPATH)))
 OBJS = $(SRCS:%.c=%.o)
 DEPS = $(SRCS:%.c=%.d) $(EXES:%.exe=%.d)
