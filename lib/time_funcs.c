@@ -1,25 +1,38 @@
 #include <string.h>
 #include <time.h>
+#include <sys/time.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "time_funcs.h"
 
+static const unsigned int TIME_FMT_LEN = sizeof("2012-12-31 12:59:59.123456789");
+
+int print_timeval(struct timeval *tv) {
+	char timestr[TIME_FMT_LEN];
+
+	time_t bla = tv->tv_sec;
+	struct tm *nowtm = localtime(&bla);
+	if (strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", nowtm) == 0)
+		return 1;
+	printf("%s.%09ld", timestr, tv->tv_usec);
+	return 0;
+}
+
 int print_timespec(struct timespec *ts, struct timespec *res) {
-	const unsigned int TIME_FMT = strlen("2012-12-31 12:59:59.123456789") + 1;
-	char timestr[TIME_FMT];
-	if (timespec2str(timestr, TIME_FMT, ts) != 0) {
+	char timestr[TIME_FMT_LEN];
+	if (timespec2str(timestr, TIME_FMT_LEN, ts) != 0) {
 		printf("timespec2str failed!\n");
 		return EXIT_FAILURE;
 	} else {
 		unsigned long resol = (res != NULL) ? resol = res->tv_sec * NS_PER_SEC + res->tv_nsec : 0;
-		printf("res=%ld ns, time=%s\n", resol, timestr);
+		printf("time=%s, res=%ld ns", timestr, resol);
 		return EXIT_SUCCESS;
 	}
 }
 
 /* buf needs to be able to store a maximum of 30 characters. */
-int timespec2str(char *buf, uint len, struct timespec *ts) {
+int timespec2str(char *buf, int len, struct timespec *ts) {
 	int ret;
 	struct tm t;
 
