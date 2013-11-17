@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
 	}
 
 	//libusb_set_debug(NULL, 2);
-	struct j2a_handle *comm = j2a_connect(NULL);
+	j2a_handle *comm = j2a_connect(NULL);
 	if (comm == NULL) {
 		fprintf(stderr, "connect failed\n");
 		return EXIT_FAILURE;
@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
 		struct j2a_packet p;
 		p.len = 0;
 		if ((ret = j2a_send_by_name(comm, &p, argv[1])) == 0)
-			j2a_packet_print(&p);
+			j2a_print_packet(&p);
 	} else {
 		ret = print_time_device(comm);
 	}
