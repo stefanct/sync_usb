@@ -1,0 +1,9 @@
+ACTION=="add",\
+	SUBSYSTEM=="usb", \
+	ATTR{bInterfaceClass}=="ff", \
+	ATTR{bInterfaceSubClass}=="34", \
+	ATTR{bNumEndpoints}=="01", \
+	ATTR{bInterfaceProtocol}=="01", \
+	ATTR{bAlternateSetting}==" 0", \
+	ATTR{interface}=="SyncUSB", \
+	RUN+="<path to udev.sh> <path to sync.exe> <optional arguments>"
