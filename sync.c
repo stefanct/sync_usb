@@ -1,3 +1,5 @@
+/** @file */
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -229,12 +231,14 @@ static void handler(int sig) {
 	run = false;
 }
 
-/* returns
- * 	 -1 on errors
- * 	  0 on successful server bindings
- *   1 on successful client connects
+/** Connect or create a singleton socket.
+ *  Tries to create a UNIX socket with path \a name and sets \a socket_fd to the resulting file descriptor.
+ *  \returns
+ *  	-1 on errors,
+ *  	 0 on successful server bindings,
+ *  	 1 on successful client connects.
  */
-int singleton_connect(const char *name) {
+int singleton_connect(const char *name, int * const socket_fd) {
 	int len, tmpd;
 	struct sockaddr_un addr = {0};
 
@@ -243,40 +247,36 @@ int singleton_connect(const char *name) {
 		return -1;
 	}
 
-	/* fill in socket address structure */
+	// fill in socket address structure
 	addr.sun_family = AF_UNIX;
 	strcpy(addr.sun_path, name);
 	len = offsetof(struct sockaddr_un, sun_path) + strlen(name);
 
 	int ret;
-	unsigned int retries = 0;
+	unsigned int retries = 1; // at least one to start with abandoned socket
 	do {
-		/* bind the name to the descriptor */
+		// bind the name to the descriptor
 		ret = bind(tmpd, (struct sockaddr *)&addr, len);
-		/* if this succeeds there was no daemon before */
+		*socket_fd = tmpd;
+		// if this succeeds there was no daemon before
 		if (ret == 0) {
-			socket_fd = tmpd;
-			isdaemon = true;
 			return 0;
-		} else {
-			if (errno == EADDRINUSE) {
-				ret = connect(tmpd, (struct sockaddr *) &addr, sizeof(struct sockaddr_un));
-				if (ret != 0) {
-					if (errno == ECONNREFUSED) {
-						syslog(LOG_WARNING, "Could not connect to socket - assuming daemon died.");
-						unlink(name);
-						continue;
-					}
-					syslog(LOG_ERR, "Could not connect to socket: '%s'.", strerror(errno));
+		}
+		if (errno == EADDRINUSE) {
+			ret = connect(tmpd, (struct sockaddr *) &addr, sizeof(struct sockaddr_un));
+			if (ret != 0) {
+				if (errno == ECONNREFUSED) {
+					syslog(LOG_WARNING, "Could not connect to socket - assuming daemon died.");
+					unlink(name);
 					continue;
 				}
-				syslog(LOG_NOTICE, "Daemon is already running.");
-				socket_fd = tmpd;
-				return 1;
+				syslog(LOG_ERR, "Could not connect to socket: '%s'.", strerror(errno));
+				continue;
 			}
-			syslog(LOG_ERR, "Could not bind to socket: '%s'.", strerror(errno));
-			continue;
+			syslog(LOG_NOTICE, "Daemon is already running.");
+			return 1;
 		}
+		syslog(LOG_ERR, "Could not bind to socket: '%s'.", strerror(errno));
 	} while (retries-- > 0);
 
 	syslog(LOG_ERR, "Could neither connect to an existing daemon nor become one.");
@@ -514,9 +514,9 @@ int main(int argc, char **argv) {
 
 	
 	int ret;
-	switch (singleton_connect(SOCKET_NAME)) {
+	switch (singleton_connect(SOCKET_NAME, &socket_fd)) {
 		case 0: { /* Daemon */
-
+			isdaemon = true;
 			if (daemonize_it) {
 				pid_t pid = daemonize();
 				if (pid < 0) {
