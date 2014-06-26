@@ -20,6 +20,7 @@ static inline int read_frame_number(const char *path) {
 }
 
 int wait_for_new_frame_number(void) {
+	// FIXME: this should be inferred somehow
 	const char *path = "/sys/devices/pci0000:00/0000:00:1d.0/usb2/frame_number";
 
 	int old = read_frame_number(path);

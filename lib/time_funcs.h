@@ -1,6 +1,9 @@
 #ifndef TIME_FUNCS_H
 #define TIME_FUNCS_H
 
+#include <time.h>
+#include <sys/time.h>
+
 #define NS_PER_SEC 1000000000L
 #define US_PER_SEC    1000000L
 

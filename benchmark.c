@@ -2,22 +2,17 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <inttypes.h>
-#include <unistd.h>
-#include <string.h>
 #include <sys/io.h>
 #include <time.h>
 #include "time_funcs.h"
 #include "realtimeify.h"
-#include "usb_frames.h"
 
-#define uint unsigned int
-
-int toggle_pin(void) {
+/* Toggles the highest pin of the 0x80 "POST" I/O port. */
+void toggle_pin(void) {
 	static int val = 0x88;
 	static const uint8_t mask = 0x80;
 	outb(val, 0x80);
 	val ^= mask;
-	return 0;
 }
 
 #define WAKEUP_HEADROOM_NS 20000 /* number of ns to wake up before event */
@@ -39,8 +34,7 @@ int benchmark(unsigned int times) {
 				clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &sync_ts, NULL);
 			}
 		}
-		if (toggle_pin() != 0)
-			return EXIT_FAILURE;
+		toggle_pin();
 
 		char buf[30];
 		timespec2str(buf, sizeof(buf), &ts);
@@ -68,41 +62,4 @@ int parse_and_benchmark(int argc, char **argv) {
 
 int main(int argc, char **argv) {
 	return realtimeify(parse_and_benchmark, argc, argv);
-/*	if (j2a_init() != 0) {
-		fprintf(stderr, "init failed\n");
-		return EXIT_FAILURE;
-	}
-
-	//libusb_set_debug(NULL, 2);
-	j2a_handle *comm = j2a_connect(NULL);
-	if (comm == NULL) {
-		fprintf(stderr, "connect failed\n");
-		return EXIT_FAILURE;
-	}
-	printf("connected.\n");
-	if (j2a_fetch_funcmap(comm) != 0)
-		return EXIT_FAILURE;
-	
-	j2a_print_funcmap(comm, stdout);
-
-	if (j2a_fetch_props(comm) != 0)
-		return EXIT_FAILURE;
-	
-	j2a_print_propmap(comm, stdout);
-
-	int ret = EXIT_SUCCESS;
-	if (argc > 1) {
-		struct j2a_packet p;
-		p.len = 0;
-		if ((ret = j2a_send_by_name(comm, &p, argv[1])) == 0)
-			j2a_print_packet(&p);
-	} else {
-		ret = print_time_device(comm);
-	}
-
-	j2a_disconnect(comm);
-	j2a_shutdown();
-
-	return ret;
-*/
 }

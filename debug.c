@@ -6,10 +6,6 @@
 #include "time_funcs.h"
 #include "j2a.h"
 
-//#define fromArray(type, source, offset) \
-	for (unsigned int i = offset; i < sizeof(type); i++)\
-		us |= (type)p->msg[i] << (i * sizeof(type));
-
 #define fromArray(type, source, offset) *(type*)(&(source)[offset])
 #define toArray(type, source, destArray, offset) { type* ntoh_temp_var = (type*)(&(destArray)[offset]);ntoh_temp_var[0] = (source); }
 
@@ -75,52 +71,20 @@ static int trigger_sync(j2a_handle *comm[], unsigned int len, uint64_t offset) {
 	return EXIT_SUCCESS;
 }
 
-int connect(j2a_handle *comm[], unsigned int len) {
-	for (uint i = 0; i < len; i++) {
-		char nth[2];
-		snprintf(nth, 2, "%i", i);
-		comm[i] = j2a_connect(nth);
-		if (comm[i] == NULL) {
-			fprintf(stderr, "connect %s failed\n", nth);
-			return EXIT_FAILURE;
-		}
-		printf("connected %d.\n", i);
-		if (j2a_fetch_funcmap(comm[i]) != 0)
-			goto bail_out;
-		
-		//j2a_print_funcmap(comm[i], stdout);
-
-		//if (j2a_fetch_props(comm[i]) != 0)
-			//return EXIT_FAILURE;
-		
-		//j2a_print_propmap(comm[i], stdout);
-	}
-	return EXIT_SUCCESS;
-bail_out:
-	for (uint i = 0; i < len; i++) {
-		j2a_disconnect(comm[i]);
-	}
-	return EXIT_FAILURE;
-}
-
-void disconnect(j2a_handle *comm[], unsigned int len) {
-	for (uint i = 0; i < len; i++)
-		j2a_disconnect(comm[i]);
-}
-
 void handle_sif_packet(struct j2a_sif_packet *sif) {
 	j2a_handle *comm = sif->comm;
 	j2a_packet *p = &sif->p;
-	uint8_t seq = sif->seq;
+	//uint8_t seq = sif->seq;
 	//printf("sif packet with sequence number %d received.\n", seq);
 	//j2a_print_packet(p);
-	print_time_a2j(p->msg, 0);
-	printf(", ");
+	
+	//print_time_a2j(p->msg, 0);
+	//printf(", ");
 	int16_t quad = fromArray(int16_t, p->msg, sizeof(time_t));
-	printf("quad value: %d, ", quad);
+	//printf("quad value: %d, ", quad);
 
 	int8_t pwm = (quad - 1024) * 100 / 1024;
-	printf("pwm value: %d, ", pwm);
+	//printf("pwm value: %d, ", pwm);
 	toArray(int8_t, pwm, p->msg, 0);
 	p->len = 1;
 	int ret = j2a_send_by_name(comm, p, "a2j_set_servo");
@@ -128,8 +92,8 @@ void handle_sif_packet(struct j2a_sif_packet *sif) {
 		printf("j2a_send_by_name() returned %d\n", ret);
 	else if (p->cmd != 0)
 		printf("the RPC returned %d\n", p->cmd);
-	else
-		printf("ok\n");
+	//else
+		//printf("ok\n");
 }
 
 static bool run = true;
@@ -170,7 +134,7 @@ int main(int argc, char **argv) {
 	//if (argc > 1)
 		//nth_dev = argv[1];
 
-	struct sigaction sa;
+	struct sigaction sa = {0};
 	sa.sa_handler = &handler;
 	sigemptyset(&sa.sa_mask);
 	if (sigaction(SIGHUP, &sa, NULL) != 0 || sigaction(SIGINT, &sa, NULL) != 0 || sigaction(SIGQUIT, &sa, NULL) != 0 || sigaction(SIGPIPE, &sa, NULL) != 0 || sigaction(SIGALRM, &sa, NULL) != 0 || sigaction(SIGTERM, &sa, NULL) != 0) {
@@ -183,13 +147,16 @@ int main(int argc, char **argv) {
 	sigaction(SIGUSR2, &sa, NULL);
 
 
-	uint devs = 1;
-	j2a_handle *comm[devs];
-	if (connect(comm, devs) != 0) {
+	unsigned int devs = 0;
+	//j2a_handle *comm[devs];
+	j2a_handle **comm = NULL;
+	if ((j2a_connect_all(&comm, &devs) != 0) || (devs < 1)) {
 		fprintf(stderr, "connect failed\n");
 		ret = EXIT_FAILURE;
 		goto shutdown;
 	}
+
+	j2a_print_funcmap(comm[0], stdout);
 
 /*
 	ret = test_j2a(comm[0]);
@@ -197,7 +164,7 @@ int main(int argc, char **argv) {
 	*/
 
 	j2a_sif_handler h = {
-			.cmd = 13,
+			.cmd = 0,
 			.handle = handle_sif_packet,
 			.next = NULL
 	};
@@ -210,10 +177,10 @@ int main(int argc, char **argv) {
 	}
 
 
-	uint64_t offset = 0;
-	if (argc > 2)
-		offset = strtoul(argv[2], NULL, 0);
-	trigger_sync(comm, devs, offset);
+	//uint64_t offset = 0;
+	//if (argc > 2)
+		//offset = strtoul(argv[2], NULL, 0);
+	//trigger_sync(comm, devs, offset);
 
 /*
 	if (argc > 1) {
@@ -240,8 +207,9 @@ int main(int argc, char **argv) {
 		sleep(1);
 	}
 disconnect:
-	disconnect(comm, devs);
+	j2a_disconnect_all(&comm, &devs);
 shutdown:
+	free(comm);
 	j2a_shutdown();
 
 	return ret;
