@@ -4,3 +4,6 @@
 [submodule "realtimeify"]
 	path = realtimeify
 	url = git@github.com:stefanct/realtimeify.git
+[submodule "sync_usb_kernel"]
+	path = sync_usb_kernel
+	url = git@github.com:stefanct/sync_usb_kernel.git
